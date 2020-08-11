@@ -204,7 +204,46 @@ empty: default is no change
                 print("Not valid input.  Press h for help.")
                 continue
     
-    def merge_to(self, target='nsysu_digits'):
-        #shuffle and keep label only
-        #TBD
-        pass
+    def merge_to(self, target='nsysu-digits'):
+        exist_files = os.listdir(target)
+        tar_name = os.path.split(target)[-1]
+        if tar_name+'.csv' not in exist_files:
+            start = 0
+        else:
+            nsysu = raw_data(target)
+            start = nsysu.num
+        
+        ### expand DataFrame
+        mix = self.df.copy()
+        mix = mix.sample(frac=1)
+        mix['new'] = ["%08d.png"%i for i in range(start, start + self.num)]
+        mix.sort_values('new')
+        
+        ### Move files
+        for i in range(self.num):
+            dst = mix.loc[i,'new']
+            if dst in exist_files:
+                print("File exists: %s -> %s"%(src,dst))
+                break
+        else:
+            print("Moving files...", end=" ")
+            for i in range(self.num):
+                src,dst = mix.iloc[i,0], mix.loc[i,'new']
+                os.rename(os.path.join(self.path,src), 
+                          os.path.join(target,dst))
+            print("Done")
+        
+        ### Create or merge csv
+        mix = mix.loc[:,['new',1]]        
+        if start == 0:
+            print("Creating csv...", end=" ")
+            mix.to_csv(os.path.join(target, tar_name+'.csv'),
+                       header=False,
+                       index=False)
+        else:
+            print("Merging csv...", end=" ")
+            pd.concat([nsysu.df,mix]).to_csv(os.path.join(target, tar_name+'.csv'),
+                                             header=False,
+                                             index=False)
+        print("Done")
+        
