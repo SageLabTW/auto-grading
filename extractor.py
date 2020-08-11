@@ -12,7 +12,7 @@ def clean(folder):
     shutil.rmtree(folder)
 
 def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='default', filename='default', pages=None):
-    """Write ppm files and a csv file to output_folder.
+    """Write png files and a csv file to output_folder.
     
     Input:
         path: path of pdf file
@@ -32,11 +32,11 @@ def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='defau
     
     # 建立資料夾，預設為 pdf 檔名
     if output_folder == 'default':
-        fn = os.path.split(path)[-1] ### Jep: use os to analyze the path
-        output_folder = os.path.splitext(fn)[0]
+        fn = os.path.split(path)[-1]
+        output_folder = os.path.splitext(fn)[0] 
     try:
         os.mkdir(output_folder)
-    except FileExistsError: ### make exception precise
+    except FileExistsError:
         print("Error: There exists a folder called \'{}\'.".format(output_folder))
         question = "Do you want to remove the folder? [y/N]"
         ans = input(prompt=question)
@@ -48,7 +48,7 @@ def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='defau
     
     # 定義每一張檔名，預設為"資料夾名稱_{}.jpg"
     if filename == 'default':
-        filename = output_folder + '_{:03d}.png' ### Jep: change {} to {:03d}
+        filename = output_folder + '_{:03d}.png'
     else:
         filename = filename + '_{:03d}.png'
     output_path = os.path.join(output_folder, filename)
@@ -56,9 +56,9 @@ def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='defau
     # 將 pdf 逐頁拆分並轉換成 jpg 並儲存
     if pages != None:
         imgs = p2i.convert_from_path(path, grayscale = True, 
-                                     first_page=pages[0], last_page=pages[1]) ### Jep: use default pgm format
+                                     first_page=pages[0], last_page=pages[1])
     else:
-        imgs = p2i.convert_from_path(path, grayscale = True) ### Jep: use default pgm format
+        imgs = p2i.convert_from_path(path, grayscale = True)
     
     ### create csv
     num_imgs = len(imgs)
@@ -137,12 +137,16 @@ class raw_data:
         i = 0
         
         while True:
-            self.examine(start + i*each_row, 
-                         min(start + (i+1)*each_row, total), 
-                         each_row, size, 
-                         label=new_df)
-            
-            print('Give me five digits for your changes: [h] help')
+            if i >= rows:
+                print('Reaching the end.  [s]ave or [q]uit?')
+            else:
+                self.examine(start + i*each_row, 
+                             min(start + (i+1)*each_row, total), 
+                             each_row, size, 
+                             label=new_df)
+
+                print('Give me five digits for your changes: [h] help')
+
             c = input()
             if c == 'h':
                 print("""h: this page
@@ -152,36 +156,50 @@ q: quit without saving
 .-...: drop the second data 
 (the two lines above can be merged as .-.1.)
 empty: default is no change
+*** No changes are made until saved ***
 """)
                 continue
             elif c == 'q':
                 break
             elif c == 's':
-                print("New %s.csv written to %s."%(self.name, self.path))
-                print("Changed ? labels and dropped ? pictures")
-                #TBD
+                self.df = new_df.loc[~(new_df.notes == 'd'),[0,1]]
+                for new_i in range(self.num):
+                    if new_df.loc[new_i,'notes'] == 'd':
+                        fn = new_df.iloc[new_i,0]
+                        os.remove(os.path.join(self.path, fn))
+                old_num = self.num
+                self.num = self.df.shape[0]
+                print("Changed %s labels and dropped %s pictures:"
+                      %(np.sum(new_df.notes == 'r'),
+                        np.sum(new_df.notes == 'd')))
+                print("Number of images: %s -> %s"%(old_num, self.num))
+                self.df.to_csv(os.path.join(self.path, self.name+'.csv'), 
+                               header=False, 
+                               index=False)
+                print("New %s.csv written to %s."
+                      %(self.name, self.path))
                 break
+            elif c == '': ### default action
+                i += 1
+                continue
             elif len(c) == each_row:
                 changes.append(c)
                 for j,d in enumerate(c):
                     real_k = start + i*each_row + j
-                    safe = True
                     if d == '.':
                         continue
                     elif d == '-':
-                        df.iloc[real_k,1] = -1
-                        df.nodes[real_k] = 'd'
+                        new_df.iloc[real_k,1] = -1
+                        new_df.loc[real_k,'notes'] = 'd'
                         continue
                     elif d.isdigit():
+                        if new_df.iloc[real_k,1] != float(d):
+                            new_df.loc[real_k,'notes'] = 'r' 
+                            new_df.iloc[real_k,1] = float(d)
                         continue
                     else:
                         print("Something is wrong.  Try again.")
-                        safe = False
                         break
-                if safe:
-                    i += 1
-                else:
-                    continue
             else:
                 print("Not valid input.  Press h for help.")
                 continue
