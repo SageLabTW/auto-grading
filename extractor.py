@@ -88,7 +88,39 @@ class raw_data:
                               header=None)
         self.num = self.df.shape[0]
     
-    def examine(self, start=None, end=None, each_row=5, size=2):
+    def examine(self, start=None, end=None, each_row=5, size=2, label='data'):
+        if start == None:
+            start = 0
+        if end == None:
+            end = self.num
+        if isinstance(label, str) and label == 'data':
+            label = self.df
+
+        total = end - start
+        rows = total // each_row
+        if total % each_row != 0:
+            rows += 1
+            
+        fig,axs = plt.subplots(rows, each_row, 
+                               figsize=(size*each_row,size*rows),
+                               squeeze=False)
+
+        for k in range(total):
+            real_k = start + k
+            i,j = k//each_row, k%each_row
+            fn = label.iloc[real_k,0]
+            ax = axs[i][j]
+            ax.axis('off')
+            img = plt.imread(os.path.join(self.path, fn))
+            ax.imshow(img, cmap='Greys_r', vmin=0, vmax=1)
+            ax.set_title('%s'%label.iloc[real_k,1])
+            ax.text(0, 27, fn)
+        plt.show()
+        
+        return fig
+    
+    def labeler(self, start=None, end=None, each_row=5, size=2):
+        """API for examining and modifying the data and labels"""
         if start == None:
             start = 0
         if end == None:
@@ -99,24 +131,60 @@ class raw_data:
         if total % each_row != 0:
             rows += 1
             
-        fig,axs = plt.subplots(rows, each_row, 
-                               figsize=(size*each_row,size*rows))
-
-        for k in range(total):
-            i,j = k//each_row, k%each_row
-            fn = self.df.iloc[k,0]
-            ax = axs[i][j]
-            ax.axis('off')
-            img = plt.imread(os.path.join(self.path, fn))
-            ax.imshow(img, cmap='Greys_r', vmin=0, vmax=1)
-            ax.set_title('%s'%self.df.iloc[k,1])
-            ax.text(0, 27, fn)
+        changes = []
+        new_df = self.df.copy()
+        new_df['notes'] = ''
+        i = 0
         
-        return fig
-    
-    def labeler(self, start=None, end=None, each_row=5, size=2):
-        #TBD
-        pass
+        while True:
+            self.examine(start + i*each_row, 
+                         min(start + (i+1)*each_row, total), 
+                         each_row, size, 
+                         label=new_df)
+            
+            print('Give me five digits for your changes: [h] help')
+            c = input()
+            if c == 'h':
+                print("""h: this page
+s: save and leave
+q: quit without saving
+...1.: change the fourth label to 1
+.-...: drop the second data 
+(the two lines above can be merged as .-.1.)
+empty: default is no change
+""")
+                continue
+            elif c == 'q':
+                break
+            elif c == 's':
+                print("New %s.csv written to %s."%(self.name, self.path))
+                print("Changed ? labels and dropped ? pictures")
+                #TBD
+                break
+            elif len(c) == each_row:
+                changes.append(c)
+                for j,d in enumerate(c):
+                    real_k = start + i*each_row + j
+                    safe = True
+                    if d == '.':
+                        continue
+                    elif d == '-':
+                        df.iloc[real_k,1] = -1
+                        df.nodes[real_k] = 'd'
+                        continue
+                    elif d.isdigit():
+                        continue
+                    else:
+                        print("Something is wrong.  Try again.")
+                        safe = False
+                        break
+                if safe:
+                    i += 1
+                else:
+                    continue
+            else:
+                print("Not valid input.  Press h for help.")
+                continue
     
     def merge_to(self, target='nsysu_digits'):
         #shuffle and keep label only
