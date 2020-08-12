@@ -262,7 +262,8 @@ empty: default is no change
             print("Done")
         
         ### Create or merge csv
-        mix = mix.loc[:,['new',1]].rename({'new':0}, axis=1)        
+        mix = mix.loc[:,['new',1]].rename({'new':0}, axis=1)
+        mix[2] = self.name
         if start == 0:
             print("Creating csv...", end=" ")
             mix.to_csv(os.path.join(target, tar_name+'.csv'),
