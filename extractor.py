@@ -254,15 +254,15 @@ empty: default is no change
                 print("File exists: %s -> %s"%(src,dst))
                 break
         else:
-            print("Moving files...", end=" ")
+            print("Copying files...", end=" ")
             for i in range(self.num):
                 src,dst = mix.iloc[i,0], mix.loc[i,'new']
-                os.rename(os.path.join(self.path,src), 
-                          os.path.join(target,dst))
+                shutil.copyfile(os.path.join(self.path,src), 
+                                os.path.join(target,dst))
             print("Done")
         
         ### Create or merge csv
-        mix = mix.loc[:,['new',1]]        
+        mix = mix.loc[:,['new',1]].rename({'new':0}, axis=1)        
         if start == 0:
             print("Creating csv...", end=" ")
             mix.to_csv(os.path.join(target, tar_name+'.csv'),
@@ -270,8 +270,9 @@ empty: default is no change
                        index=False)
         else:
             print("Merging csv...", end=" ")
-            pd.concat([nsysu.df,mix]).to_csv(os.path.join(target, tar_name+'.csv'),
-                                             header=False,
-                                             index=False)
+            pd.concat([nsysu.df,mix], 
+                      ignore_index=True).to_csv(os.path.join(target, tar_name+'.csv'), 
+                                                header=False, 
+                                                index=False)
         print("Done")
         
