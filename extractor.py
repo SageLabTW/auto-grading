@@ -11,6 +11,16 @@ def clean(folder):
     """rm -rf folder"""
     shutil.rmtree(folder)
 
+boxes = {"1081f": None, 
+         "1081_1": (1353,2022,1479,2148), # tested
+         "1081_2": (1353,2022,1479,2148), # not tested
+         "1081_3": (1353,2022,1479,2148), # not tested
+         "1082_1": (1377,2047,1503,2173), # tested
+         "1082_2": (1377,2047,1503,2173), # not tested
+         "1082_3": (1377,2047,1503,2173), # not tested
+         "a4": (1417.78, 2102.78, 1575.26, 2260.26) # not tested
+        }
+    
 def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='default', filename='default', pages=None):
     """Write png files and a csv file to output_folder.
     
@@ -20,7 +30,8 @@ def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='defau
         filename: suffix of output filename, default name is {output_folder}_{}.pgm
         box: (left, top, right, bottom) for cropping checkcode
             108 fake: ???
-            108~109 real: (1377,2047,1503,2173)
+            1081: (1353,2022,1479,2148)
+            1082: (1377,2047,1503,2173)
             a4: (1417.78, 2102.78, 1575.26, 2260.26) not tested
     Note: 
         a4 page size = 29.7 x 21 cm; 11.69 x 8.27 in; 2339 x 1654 in 200 dpi
@@ -119,7 +130,7 @@ class raw_data:
         
         return fig
     
-    def labeler(self, start=None, end=None, each_row=5, size=2):
+    def labeler(self, start=None, end=None, each_row=5, size=2, patch=None):
         """API for examining and modifying the data and labels"""
         if start == None:
             start = 0
@@ -132,11 +143,23 @@ class raw_data:
             rows += 1
             
         changes = []
-        new_df = self.df.copy()
-        new_df['notes'] = ''
+        if patch != None:
+            new_df = pd.read_csv(patch, 
+                                 header=None
+                                ).rename({2:'notes'}, axis=1)
+            print("You indicated the patch %s."%patch)
+            review = input(prompt="Do you want to review the changes? [Y/n]")
+            if review in ['y', 'Y', '']:
+                review = True
+            elif review in ['n', 'N']:
+                review = False
+        else:
+            new_df = self.df.copy()
+            new_df['notes'] = ''
+            review = True
         i = 0
         
-        while True:
+        while review:
             if i >= rows:
                 print('Reaching the end.  [s]ave or [q]uit?')
             else:
@@ -178,6 +201,11 @@ empty: default is no change
                                index=False)
                 print("New %s.csv written to %s."
                       %(self.name, self.path))
+                new_df.to_csv(os.path.join(self.path, self.name+'_patch.csv'), 
+                               header=False, 
+                               index=False)
+                print("The patch %s.csv written to %s."
+                      %(self.name+'_patch', self.path))
                 break
             elif c == '': ### default action
                 i += 1
