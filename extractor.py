@@ -20,6 +20,46 @@ boxes = {"1081f": None,
          "1082_3": (1377,2047,1503,2173), # not tested
          "a4": (1417.78, 2102.78, 1575.26, 2260.26) # not tested
         }
+
+
+def find_box(img, threshold = 180):
+    img_arr = np.asarray(img)
+    rect = img_arr[img_arr.shape[0]-350:,img_arr.shape[1]-350:]
+    edge_check = np.where(rect < threshold)
+    r = edge_check[0].max()
+    c = edge_check[1].max()
+    row_cond = np.sum(rect[r-3:r+1,:] < threshold) >= 300
+    col_cond = np.sum(rect[:,c-3:c+1] < threshold) >= 300
+    if row_cond:
+        pass
+    else:
+        tmp = np.sort(edge_check[0])
+        i = 1
+        while True:
+            r = tmp[-1 - i]
+            row_cond = np.sum(rect[r-3:r+1,:] < threshold) >= 300
+            if row_cond:
+                break
+            else:
+                i += 1
+    if col_cond:
+        pass
+    else:
+        tmp = np.sort(edge_check[1])
+        i = 1
+        while True:
+            c = tmp[-1 - i]
+            col_cond = np.sum(rect[:,c-3:c+1] < threshold) >= 300
+            if col_cond:
+                break
+            else:
+                i += 1
+    r = img_arr.shape[0] - 350 + r
+    c = img_arr.shape[1] - 350 + c
+    box = (c-130, r-130, c-10, r-10)
+    return box
+
+
     
 def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='default', filename='default', pages=None):
     """Write png files and a csv file to output_folder.
@@ -82,6 +122,8 @@ def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='defau
                 index=False)
     
     for i, im in enumerate(imgs):
+        ### find box
+        box = find_box(im)
         ### extract checkcode
         checkcode = im.crop(box)
         checkcode = checkcode.resize((28,28))
@@ -210,7 +252,7 @@ empty: default is no change
             elif c == '': ### default action
                 i += 1
                 continue
-            elif len(c) == each_row:
+            elif len(c) == each_row or i == rows-1:
                 changes.append(c)
                 for j,d in enumerate(c):
                     real_k = start + i*each_row + j
