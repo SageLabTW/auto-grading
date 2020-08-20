@@ -252,8 +252,8 @@ empty: default is no change
             elif c == '': ### default action
                 i += 1
                 continue
-            elif len(c) == each_row or i == rows-1:
-                changes.append(c)
+            elif all((d in '.-0123456789') for d in c):
+                changes.append((i,c))
                 for j,d in enumerate(c):
                     real_k = start + i*each_row + j
                     if d == '.':
@@ -318,4 +318,3 @@ empty: default is no change
                                                 header=False, 
                                                 index=False)
         print("Done")
-        
