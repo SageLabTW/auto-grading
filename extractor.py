@@ -2,6 +2,7 @@
 import os
 import shutil
 import pdf2image as p2i
+from PIL import ImageDraw
 
 import numpy as np
 import pandas as pd
@@ -61,7 +62,7 @@ def find_box(img, threshold = 180):
 
 
     
-def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='default', filename='default', pages=None):
+def extract(path, box='auto', get_key=False, output_folder='default', filename='default', pages=None, test_mode=False):
     """Write png files and a csv file to output_folder.
     
     Input:
@@ -105,11 +106,12 @@ def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='defau
     output_path = os.path.join(output_folder, filename)
     
     # 將 pdf 逐頁拆分並轉換成 jpg 並儲存
+    # if test_mode is on; use color photos
     if pages != None:
-        imgs = p2i.convert_from_path(path, grayscale = True, 
+        imgs = p2i.convert_from_path(path, grayscale = not test_mode, 
                                      first_page=pages[0], last_page=pages[1])
     else:
-        imgs = p2i.convert_from_path(path, grayscale = True)
+        imgs = p2i.convert_from_path(path, grayscale = not test_mode)
     
     ### create csv
     num_imgs = len(imgs)
@@ -121,11 +123,24 @@ def extract(path, box=(1377,2047,1503,2173), get_key=False, output_folder='defau
                 header=False, 
                 index=False)
     
+    auto_boxing = True if box == 'auto' else False
     for i, im in enumerate(imgs):
         ### find box
-        box = find_box(im)
+        if auto_boxing:
+            box = find_box(im)
+            
         ### extract checkcode
-        checkcode = im.crop(box)
+        if test_mode:
+            w = box[2] - box[0]
+            h = box[3] - box[1]
+            r = 0.3 ### extra padding
+            view_box = (box[0] - r*w, box[1] - r*h, box[2] + r*w, box[3] + r*h)
+            draw = ImageDraw.Draw(im)
+            draw.rectangle(box, width=3, outline='red')
+            checkcode = im.crop(view_box)
+            
+        else:
+            checkcode = im.crop(box)
         checkcode = checkcode.resize((28,28))
         checkcode.save(output_path.format(i))
         
