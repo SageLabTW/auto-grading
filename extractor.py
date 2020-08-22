@@ -306,14 +306,14 @@ empty: default is no change
         
         ### Move files
         for i in range(self.num):
-            dst = mix.loc[i,'new']
+            src,dst = mix.loc[i,0], mix.loc[i,'new']
             if dst in exist_files:
                 print("File exists: %s -> %s"%(src,dst))
                 break
         else:
             print("Copying files...", end=" ")
             for i in range(self.num):
-                src,dst = mix.iloc[i,0], mix.loc[i,'new']
+                src,dst = mix.loc[i,0], mix.loc[i,'new']
                 shutil.copyfile(os.path.join(self.path,src), 
                                 os.path.join(target,dst))
             print("Done")
