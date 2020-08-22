@@ -216,18 +216,22 @@ class raw_data:
             review = True
         i = 0
         
-        while review:
-            if i >= rows:
-                print('Reaching the end.  [s]ave or [q]uit?')
+        while True:
+            if review:
+                if i >= rows:
+                    print('Reaching the end.  [s]ave or [q]uit?')
+                else:
+                    self.examine(start + i*each_row, 
+                                 min(start + (i+1)*each_row, total), 
+                                 each_row, size, 
+                                 label=new_df)
+
+                    print('Give me five digits for your changes: [h] help')
+
+                c = input()
             else:
-                self.examine(start + i*each_row, 
-                             min(start + (i+1)*each_row, total), 
-                             each_row, size, 
-                             label=new_df)
-
-                print('Give me five digits for your changes: [h] help')
-
-            c = input()
+                c = 's'
+                
             if c == 'h':
                 print("""h: this page
 s: save and leave
@@ -243,6 +247,7 @@ empty: default is no change
                 break
             elif c == 's':
                 self.df = new_df.loc[~(new_df.notes == 'd'),[0,1]]
+                self.df = self.df.reset_index(drop=True)
                 for new_i in range(self.num):
                     if new_df.loc[new_i,'notes'] == 'd':
                         fn = new_df.iloc[new_i,0]
@@ -302,7 +307,7 @@ empty: default is no change
         mix = self.df.copy()
         mix = mix.sample(frac=1)
         mix['new'] = ["%08d.png"%i for i in range(start, start + self.num)]
-        mix.sort_values('new')
+        # mix.sort_values('new')
         
         ### Move files
         for i in range(self.num):
