@@ -85,13 +85,14 @@ sharpen_vec = np.vectorize(sharpen)
 
 # extract 中 extract key 所需的函數，功能為找出ＱＲcode所在的位置
 def find_qr_box(img):
+    num_threshold = 150
     img = sharpen_vec(img)
     rect = img[img.shape[0]-400:,:400]
     edge_check = np.where(rect == 0)
     r = edge_check[0].max()
     c = edge_check[1].min()
-    row_cond = np.sum(rect[r-3:r+1,:] == 0) >= 100
-    col_cond = np.sum(rect[:,c-3:c+1] == 0) >= 100
+    row_cond = np.sum(rect[r-3:r+1,:] == 0) >= num_threshold
+    col_cond = np.sum(rect[:,c-3:c+1] == 0) >= num_threshold
     if row_cond:
         pass
     else:
@@ -99,7 +100,7 @@ def find_qr_box(img):
         i = 1
         while True:
             r = tmp[-1 - i]
-            row_cond = np.sum(rect[r-3:r+1,:] == 0) >= 100
+            row_cond = np.sum(rect[r-3:r+1,:] == 0) >= num_threshold
             if row_cond:
                 break
             else:
@@ -111,7 +112,7 @@ def find_qr_box(img):
         i = 1
         while True:
             c = tmp[i]
-            col_cond = np.sum(rect[:,c-3:c+1] == 0) >= 100
+            col_cond = np.sum(rect[:,c-3:c+1] == 0) >= num_threshold
             if col_cond:
                 break
             else:
@@ -233,7 +234,7 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
         except:
             print(i)
             msg[i] = -1    ### 沒有掃描到 ＱＲcode
-            
+
         ### TBD
     
     # save qr.csv
