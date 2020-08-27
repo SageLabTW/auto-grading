@@ -175,11 +175,14 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
     # 定義每一張檔名，預設為"資料夾名稱_{}.jpg"
     if filename == 'default':
         filename = output_folder + '_{:03d}.png'
+        filename_paper = 'paper_' + output_folder + '_{:03d}.png'
     else:
         filename = filename + '_{:03d}.png'
+        filename_paper = 'paper_' + filename + '_{:03d}.png'
     output_path = os.path.join(output_folder, filename)
+    output_path_paper = os.path.join(output_folder, filename_paper)
     
-    # 將 pdf 逐頁拆分並轉換成 jpg 並儲存
+    # 將 pdf 逐頁拆分並轉換成 png 並儲存
     # if test_mode is on; use color photos
     if pages != None:
         imgs = p2i.convert_from_path(path, grayscale = not test_mode, 
@@ -204,6 +207,9 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
     
     auto_boxing = True if box == 'auto' else False
     for i, im in enumerate(imgs):
+        ### save paper
+        im.save(output_path_paper.format(i))
+        
         ### find box
         if auto_boxing:
             box = find_box(im)
