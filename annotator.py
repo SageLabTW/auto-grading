@@ -19,7 +19,7 @@ class raw_paper:
         """initiate the object with path = folder_name"""
         self.path = path
         self.name = os.path.split(path)[-1]
-        self.label = pd.read_csv(os.path.join(path, self.name+'_label.csv'), 
+        self.label = pd.read_csv(os.path.join(path, self.name+'_pred.csv'), 
                               header=None)
         self.answer = pd.read_csv(os.path.join(path, self.name+'_qr.csv'), 
                               header=None)

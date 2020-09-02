@@ -3,6 +3,7 @@ import os
 import shutil
 import pdf2image as p2i
 from PIL import ImageDraw
+import pyzbar.pyzbar as zbar
 
 import numpy as np
 import pandas as pd
@@ -61,8 +62,81 @@ def find_box(img, threshold = 180):
     return box
 
 
+# extract 中 extract key 所需的函數，功能為讀取 qrcode 裡的訊息
+def detect(I): 
+    # 偵測所有的 QR code
+    barcodes = zbar.decode(I)
     
-def extract(path, box='auto', get_key=False, output_folder='default', filename='default', pages=None, test_mode=False):
+    # 逐一解碼，回傳位置與結果
+    msg = [];
+    for i, barcode in enumerate(barcodes):
+        msg.append(barcode.data.decode('utf-8'))
+    return msg
+
+
+# qr_fixer 裡所需的函數，功能為增加 qrcode 對比度
+def sharpen(k):
+    if k > 180: ### 180 是測試出來的
+        return 255
+    else:
+        return 0
+sharpen_vec = np.vectorize(sharpen)
+
+
+# extract 中 extract key 所需的函數，功能為找出ＱＲcode所在的位置
+def find_qr_box(img):
+    num_threshold = 150
+    img = sharpen_vec(img)
+    rect = img[img.shape[0]-400:,:400]
+    edge_check = np.where(rect == 0)
+    r = edge_check[0].max()
+    c = edge_check[1].min()
+    row_cond = np.sum(rect[r-3:r+1,:] == 0) >= num_threshold
+    col_cond = np.sum(rect[:,c-3:c+1] == 0) >= num_threshold
+    if row_cond:
+        pass
+    else:
+        tmp = np.sort(edge_check[0])
+        i = 1
+        while True:
+            r = tmp[-1 - i]
+            row_cond = np.sum(rect[r-3:r+1,:] == 0) >= num_threshold
+            if row_cond:
+                break
+            else:
+                i += 1
+    if col_cond:
+        pass
+    else:
+        tmp = np.sort(edge_check[1])
+        i = 1
+        while True:
+            c = tmp[i]
+            col_cond = np.sum(rect[:,c-3:c+1] == 0) >= num_threshold
+            if col_cond:
+                break
+            else:
+                i += 1
+    r = img.shape[0] - 400 + r
+    qr_box = (c-5, r-155, c+155, r+5, )
+    return qr_box
+
+
+# extract 中 extract key 所需的函數，功能為增加ＱＲcode辨識率
+def qr_fixer(img):
+    img = sharpen_vec(img)
+    idx = np.where(img == 255)
+    for i in range(len(idx[0])):
+        r_idx = idx[0][i]
+        c_idx = idx[1][i]
+        tmp_rect = img[r_idx-1:r_idx+2,c_idx-1:c_idx+2]
+        if np.sum(tmp_rect) <= 255*4:
+            img[r_idx,c_idx] = 0
+    return img
+
+
+    
+def extract(path, key_path, box='auto', get_key=False, output_folder='default', filename='default', pages=None, test_mode=False):
     """Write png files and a csv file to output_folder.
     
     Input:
@@ -101,11 +175,14 @@ def extract(path, box='auto', get_key=False, output_folder='default', filename='
     # 定義每一張檔名，預設為"資料夾名稱_{}.jpg"
     if filename == 'default':
         filename = output_folder + '_{:03d}.png'
+        filename_paper = 'paper_' + output_folder + '_{:03d}.png'
     else:
         filename = filename + '_{:03d}.png'
+        filename_paper = 'paper_' + filename + '_{:03d}.png'
     output_path = os.path.join(output_folder, filename)
+    output_path_paper = os.path.join(output_folder, filename_paper)
     
-    # 將 pdf 逐頁拆分並轉換成 jpg 並儲存
+    # 將 pdf 逐頁拆分並轉換成 png 並儲存
     # if test_mode is on; use color photos
     if pages != None:
         imgs = p2i.convert_from_path(path, grayscale = not test_mode, 
@@ -123,8 +200,16 @@ def extract(path, box='auto', get_key=False, output_folder='default', filename='
                 header=False, 
                 index=False)
     
+    # prepare for extract key
+    key = pd.read_csv(key_path)    ### load key
+    msg = pd.Series(np.zeros(num_imgs, dtype = int))    ### for recording key
+    
+    
     auto_boxing = True if box == 'auto' else False
     for i, im in enumerate(imgs):
+        ### save paper
+        im.save(output_path_paper.format(i))
+        
         ### find box
         if auto_boxing:
             box = find_box(im)
@@ -145,7 +230,25 @@ def extract(path, box='auto', get_key=False, output_folder='default', filename='
         checkcode.save(output_path.format(i))
         
         ### extract key
+        qr_box = find_qr_box(im)
+        qrcode = im.crop(qr_box)
+        qrcode = qr_fixer(qrcode)
+        tmp_msg = detect(qrcode)
+        try:
+            tmp_msg = tmp_msg[0][1:]
+            msg[i] = key.CHECKCODE.loc[key.KEY == tmp_msg].values[0]
+        except:
+            print(i)
+            msg[i] = -1    ### 沒有掃描到 ＱＲcode
+
         ### TBD
+    
+    # save qr.csv
+    df = df.T
+    df[1] = msg
+    df.to_csv(os.path.join(output_folder, output_folder+'_qr.csv'),
+              header=False,
+              index=False)
         
 class raw_data:
     def __init__(self, path):
