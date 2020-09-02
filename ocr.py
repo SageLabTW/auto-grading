@@ -1,4 +1,4 @@
-import extractor_modify as ex
+import extractor as ex
 import annotator as an
 
 import os
