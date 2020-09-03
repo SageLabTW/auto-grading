@@ -10,7 +10,7 @@ Necessary Requirements : tensorflow 2.1.0, pdf2image 1.13.1, Pillow 7.0.0 and py
 * __annotator.py__ : This script includes the functions for grading on their examination paper.
 * __OCR_mdl.h5__ : This file is the trained model for OCR system.  
 * __font_style__ : This folder includes the necessary files about font style for annotator to grade.  
-* __nsysu-digits__ : This folder is our handwritten digit database. All images are grayscale and the size is 28 $\times$ 28.  
+* __nsysu-digits__ : This folder is our handwritten digit database. All images are grayscale and the size is 28*28.  
 
 ## How to Use
 If you have installed jupyter notebook, run the file `main.ipynb` on your machine and make sure you have installed the necessary library.  
