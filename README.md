@@ -1,5 +1,5 @@
 ## Auto-grading
-An auto-grading system for handwritten digits implemented by Python.  
+An auto-grading system for handwritten digits implemented by Python. Authors: Jephian Lin (maintainer) and Chan-Yu Pan (main).  
 
 Necessary Requirements : tensorflow 2.1.0, pdf2image 1.13.1, Pillow 7.0.0 and pyzbar 0.1.8.  
 
