@@ -201,8 +201,9 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
                 index=False)
     
     # prepare for extract key
-    key = pd.read_csv(key_path)    ### load key
-    msg = pd.Series(np.zeros(num_imgs, dtype = int))    ### for recording key
+    if get_key:
+        key = pd.read_csv(key_path)    ### load key
+        msg = pd.Series(np.zeros(num_imgs, dtype = int))    ### for recording key
     
     
     auto_boxing = True if box == 'auto' else False
@@ -230,25 +231,27 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
         checkcode.save(output_path.format(i))
         
         ### extract key
-        qr_box = find_qr_box(im)
-        qrcode = im.crop(qr_box)
-        qrcode = qr_fixer(qrcode)
-        tmp_msg = detect(qrcode)
-        try:
-            tmp_msg = tmp_msg[0][1:]
-            msg[i] = key.CHECKCODE.loc[key.KEY == tmp_msg].values[0]
-        except:
-            print(i)
-            msg[i] = -1    ### 沒有掃描到 ＱＲcode
+        if get_key:
+            qr_box = find_qr_box(im)
+            qrcode = im.crop(qr_box)
+            qrcode = qr_fixer(qrcode)
+            tmp_msg = detect(qrcode)
+            try:
+                tmp_msg = tmp_msg[0][1:]
+                msg[i] = key.CHECKCODE.loc[key.KEY == tmp_msg].values[0]
+            except:
+                print(i)
+                msg[i] = -1    ### 沒有掃描到 ＱＲcode
 
         ### TBD
     
     # save qr.csv
-    df = df.T
-    df[1] = msg
-    df.to_csv(os.path.join(output_folder, output_folder+'_qr.csv'),
-              header=False,
-              index=False)
+    if get_key:
+        df = df.T
+        df[1] = msg
+        df.to_csv(os.path.join(output_folder, output_folder+'_qr.csv'),
+                  header=False,
+                  index=False)
         
 class raw_data:
     def __init__(self, path):
