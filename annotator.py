@@ -63,7 +63,7 @@ class raw_paper:
                 point = 5
             else:
                 point = 0
-            draw.text((1300,2200), "digits = {}".format(num), font=font)
-            draw.text((100,2200), "answer = {}".format(ans), font=font)
+            draw.text((1000,2200), "digits = {}".format(num), font=font)
+            draw.text((400,2200), "answer = {}".format(ans), font=font)
             draw.text((1300,100), "point = {}".format(point), font=font)
             im.save(output_path.format(i))

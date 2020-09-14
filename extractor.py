@@ -24,7 +24,7 @@ boxes = {"1081f": None,
         }
 
 
-def find_box(img, threshold = 180):
+def find_box(img, threshold=180, box_size=120):
     img_arr = np.asarray(img)
     rect = img_arr[img_arr.shape[0]-350:,img_arr.shape[1]-350:]
     edge_check = np.where(rect < threshold)
@@ -58,7 +58,7 @@ def find_box(img, threshold = 180):
                 i += 1
     r = img_arr.shape[0] - 350 + r
     c = img_arr.shape[1] - 350 + c
-    box = (c-130, r-130, c-10, r-10)
+    box = (c-10-box_size, r-10-box_size, c-10, r-10)
     return box
 
 
@@ -84,7 +84,7 @@ sharpen_vec = np.vectorize(sharpen)
 
 
 # extract 中 extract key 所需的函數，功能為找出ＱＲcode所在的位置
-def find_qr_box(img):
+def find_qr_box(img, box_size=160):
     num_threshold = 150
     img = sharpen_vec(img)
     rect = img[img.shape[0]-400:,:400]
@@ -118,7 +118,7 @@ def find_qr_box(img):
             else:
                 i += 1
     r = img.shape[0] - 400 + r
-    qr_box = (c-5, r-155, c+155, r+5, )
+    qr_box = (c-5, r-box_size+5, c+box_size-5, r+5, )
     return qr_box
 
 
@@ -136,7 +136,7 @@ def qr_fixer(img):
 
 
     
-def extract(path, key_path, box='auto', get_key=False, output_folder='default', filename='default', pages=None, test_mode=False):
+def extract(path, key_path, box='auto', get_key=False, output_folder='default', filename='default', pages=None, test_mode=False, cc_box_size=120, qr_box_size=160):
     """Write png files and a csv file to output_folder.
     
     Input:
@@ -213,7 +213,7 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
         
         ### find box
         if auto_boxing:
-            box = find_box(im)
+            box = find_box(im, box_size=cc_box_size)
             
         ### extract checkcode
         if test_mode:
@@ -232,16 +232,21 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
         
         ### extract key
         if get_key:
-            qr_box = find_qr_box(im)
+            qr_box = find_qr_box(im, box_size = qr_box_size)
             qrcode = im.crop(qr_box)
-            qrcode = qr_fixer(qrcode)
             tmp_msg = detect(qrcode)
             try:
                 tmp_msg = tmp_msg[0][1:]
                 msg[i] = key.CHECKCODE.loc[key.KEY == tmp_msg].values[0]
             except:
-                print(i)
-                msg[i] = -1    ### 沒有掃描到 ＱＲcode
+                qrcode = qr_fixer(qrcode)
+                tmp_msg = detect(qrcode)
+                try:
+                    tmp_msg = tmp_msg[0][1:]
+                    msg[i] = key.CHECKCODE.loc[key.KEY == tmp_msg].values[0]
+                except:
+                    print('get qrcode failed: {}'.format(filename.format(i)))
+                    msg[i] = -1    ### 沒有掃描到 ＱＲcode
 
         ### TBD
     
