@@ -8,11 +8,55 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+### for email
+import getpass
+import smtplib
+from pathlib import Path
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from email.mime.application import MIMEApplication
+
 def clean(folder):
     """rm -rf folder"""
     shutil.rmtree(folder)
 
+def get_server():
+    print("Please enter your G-mail login information.")
+    print("Visit https://support.google.com/mail/answer/185833?hl=en-GB to see how to set up app password.")
+    user = input(prompt="username: ")
+    pwd = getpass.getpass(prompt="app password: ") 
+    try:
+        server = smtplib.SMTP(host="smtp.gmail.com", port="587") # setup server
+        server.ehlo()  # verify the connection
+        server.starttls()  # use TLS
+        server.login(user, pwd)  # login with credentials
+        return server
+    except Exception as e:
+        print("Error message: ", e)
 
+def quiz_result_content(to, pic_path):
+    """
+    Input:
+        to: receiver's email address
+        pic_path: the path to the attached picture
+    """
+    fn = os.path.split(pic_path)[-1]
+    
+    content = MIMEMultipart()  
+    content["subject"] = "Quiz result" 
+    content["from"] = "jephianlin@g-mail.nsysu.edu.tw" 
+    content["to"] = to 
+    content.attach(MIMEText("Contact jephianlin@gmail.com if you have any question.")) # content
+    content.attach(MIMEImage(Path(pic_path).read_bytes(), Name=fn))
+    # pictures attached by the next line cannot be opened directly on Gmail page
+    # it can be downloaded though
+    # content.attach(MIMEApplication(Path("sampleJ_grade_000.png").read_bytes(), Name='sample'))
+    return content
+            
+def send_email(server, content):
+    server.send_message(content)
+    print("Sent!")
 
 class raw_paper:
     def __init__(self, path):
@@ -69,6 +113,26 @@ class raw_paper:
         """update self.full.points"""
         self.full.points = 5 * (self.full.std_ans == self.full.cor_ans)
         self.update_full()
+        
+    def get_email(self, email_path):
+        """create/update the self.full.email from email_path
+        
+        email_path is a csv file containing two columns (std_id, email_address)
+        """
+        try:
+            emails = pd.read_csv(email_path, index_col=0, squeeze=True, header=None)    ### load key
+        except FileNotFoundError:
+            print('File not found: {}'.format(email_path))
+            return 
+        
+        self.full['email'] = ['']*self.num
+        for i in range(self.num):
+            try:
+                self.full.loc[i,'email'] = emails[self.full.loc[i, 'id']]
+            except KeyError:
+                self.full.loc[i,'email'] = -1
+        self.update_full()
+        
                   
     def annotate(self, output_folder = 'default', filename = 'default'):
         # 建立資料夾，預設為 self.name + grade
@@ -95,6 +159,8 @@ class raw_paper:
         output_path = os.path.join(output_folder, filename)
 
         font = ImageFont.truetype('font_style/Montserrat-Regular.ttf', size = 50)
+        
+        self.full['graded_filename'] = ['']*self.num
 
         for i in range(self.num):
             row = self.full.iloc[i]
@@ -110,3 +176,53 @@ class raw_paper:
             draw.text((400,2200), "answer = {}".format(ans), font=font, fill='red')
             draw.text((1000,2200), "digits = {}".format(num), font=font, fill='red')
             im.save(output_path.format(i))
+            self.full.loc[i,'graded_filename'] = output_path.format(i)
+        self.update_full()
+
+    def group_email(self, receiver='all', mode='dry', test_receiver='jephianlin@gmail.com'):
+        """
+        receiver can be 'all' or 'v'
+        mode can be 'dry', 'test', or 'send'
+        use 'send' with caution
+        """
+        ### warning message
+        if mode == 'send':
+            print("You are going to send emails.  Sure? [y/N]")
+            ans = input()
+            if ans in ['y', 'Y']:
+                server = get_server()
+                print('Server ready.')
+            elif ans in ['n', 'N', '', None]:
+                return
+            
+        if mode == 'test':
+            server = get_server()
+            print('Server ready.')
+        
+        if receiver == 'v':
+            mailing_list = self.full.loc[self.full['receiver'] == 'v']
+        if receiver == 'all':
+            mailing_list = self.full.copy()
+            
+        for i in range(self.num):
+            row = mailing_list.iloc[i]
+            std_id = row['id']
+            email = row['email']
+            pic_path = row['graded_filename']
+            
+            if mode == 'test' and i == 0:
+                content = quiz_result_content(test_receiver, pic_path)
+                print('testing the first email to {}'.format(test_receiver))
+                print('it was suppose go to {}'.format(email))
+                send_email(server, content)
+            
+            content = quiz_result_content(email, pic_path)
+            print("Sending email to {} attaching {}...".format(email, pic_path))
+            if mode == 'send':
+                send_email(server, content)
+            else:
+                print('dry run')
+
+        if mode == 'send' or mode == 'test':
+            server.close()
+            
