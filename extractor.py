@@ -138,7 +138,7 @@ def qr_fixer(img):
 
     
 def extract(path, mode='label', box='auto', pages=None, 
-            cc_box_size=120, qr_box_size=160, 
+            cc_box_size=140, qr_box_size=180, 
             key_path='default', output_folder='default', filename='default'):
     """Write png files and a csv file to output_folder.
     
@@ -152,8 +152,8 @@ def extract(path, mode='label', box='auto', pages=None,
         pages: (start, end), the range of the pages, including both ends
 
         #CKLT
-        cc_box_size: default 120
-        qr_box_size: default 160
+        cc_box_size: default 140 (120 for 108 series)
+        qr_box_size: default 180 (160 for 108 series)
 
         key_path: path to the key, default is keys/{output_folder}_key.csv
         output_folder: name of output folder, default is path/
@@ -198,9 +198,9 @@ def extract(path, mode='label', box='auto', pages=None,
     # 將 pdf 逐頁拆分並轉換成 png 並儲存
     # if in 'test' or 'grade' mode, use color photos
     if mode == 'test' or mode == 'grade':
-        gscale = True
-    else:
         gscale = False
+    else:
+        gscale = True
         
     if pages != None:
         imgs = p2i.convert_from_path(path, grayscale=gscale, 
@@ -223,13 +223,13 @@ def extract(path, mode='label', box='auto', pages=None,
     # create empty DataFrame 
     if mode == 'grade':
         if key_path == 'default':
-            key_path = 'keys/{}_key.csv'.format(output_folder)
+            key_path = os.path.join('keys','{}_key.csv'.format(output_folder))
         try:
-            key = pd.read_csv('keys/1081_1_key.csv', index_col=0, squeeze=True)    ### load key
+            key = pd.read_csv(key_path, index_col=0, squeeze=True)    ### load key
+            no_key = False
         except FileNotFoundError:
             print('File not found: {}'.format(key_path))
-            print('Setting key to None')
-            key = None
+            no_key = True
             
         full = pd.DataFrame({
                              'filename': [filename_paper.format(i) for i in range(num_imgs)],
@@ -239,6 +239,9 @@ def extract(path, mode='label', box='auto', pages=None,
                              'cor_ans': [-1]*num_imgs,
                              'qr': ['']*num_imgs
                             })
+    
+    qr_err = 0 ### failed to scan qr code
+    key_err = 0 ### with qr code but its not in key
     
     ### cropping images
     auto_boxing = True if box == 'auto' else False
@@ -287,15 +290,22 @@ def extract(path, mode='label', box='auto', pages=None,
                 except IndexError:
                     print('get qrcode failed: {}'.format(filename.format(i)))
                     tmp_msg = -1    ### 沒有掃描到 ＱＲcode
+                    qr_err += 1
             
-            full['qr'].iloc[i] = tmp_msg
-            if tmp_msg != -1:
-                full['cor_ans'].iloc[i] = key[tmp_msg]
-
+            full.loc[i,'qr'] = tmp_msg
+            if tmp_msg != -1 and not no_key:
+                try:
+                    full.loc[i,'cor_ans'] = key[tmp_msg]
+                except KeyError:
+                    full.loc[i,'cor_ans'] = -1
+                    key_err += 1
+    
     # save {output_folder}_full.csv
     if mode == 'grade':
         full.to_csv(os.path.join(output_folder, output_folder+'_full.csv'),
                     index=False)
+        print("Failed to obtained the QR code on {} pages.".format(qr_err))
+        print("{} strings cannot be found in key.".format(key_err))
         
 class raw_data:
     def __init__(self, path):
