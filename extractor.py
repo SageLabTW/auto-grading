@@ -1,13 +1,14 @@
 
 import os
 import shutil
-import pdf2image as p2i
-from PIL import ImageDraw
-import pyzbar.pyzbar as zbar
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+import pdf2image as p2i
+from PIL import ImageDraw
+import pyzbar.pyzbar as zbar
 
 def clean(folder):
     """rm -rf folder"""
@@ -136,25 +137,37 @@ def qr_fixer(img):
 
 
     
-def extract(path, key_path, box='auto', get_key=False, output_folder='default', filename='default', pages=None, test_mode=False, cc_box_size=120, qr_box_size=160):
+def extract(path, mode='label', box='auto', pages=None, 
+            cc_box_size=120, qr_box_size=160, 
+            key_path='default', output_folder='default', filename='default'):
     """Write png files and a csv file to output_folder.
     
     Input:
         path: path of pdf file
-        output_folder: name of output folder, default name is same as pdf file
-        filename: suffix of output filename, default name is {output_folder}_{}.pgm
+            if path is pdfs/sampleJ.pdf, then extract output_folder = 'sampleJ'
+        mode: can be 'label', 'test' or 'grade'
+            grade mode will lead to more output files
         box: (left, top, right, bottom) for cropping checkcode
-            108 fake: ???
-            1081: (1353,2022,1479,2148)
-            1082: (1377,2047,1503,2173)
-            a4: (1417.78, 2102.78, 1575.26, 2260.26) not tested
+            default is 'auto', which calls the find_box function
+        pages: (start, end), the range of the pages, including both ends
+
+        #CKLT
+        cc_box_size: default 120
+        qr_box_size: default 160
+
+        key_path: path to the key, default is keys/{output_folder}_key.csv
+        output_folder: name of output folder, default is path/
+        filename: suffix of output filename, default name is {output_folder}_{03d}.pgm
+
     Note: 
         a4 page size = 29.7 x 21 cm; 11.69 x 8.27 in; 2339 x 1654 in 200 dpi
         1cm = 0.3937 inches = 78.74 pixels in 200 dpi
+        By design, the qr code is at the left bottom corner  
+               and the checkcode box is at the right bottom corner  
+        Each of them is (1cm, 1cm) to the corner and of size (2cm, 2cm).
     Output:
         None
     """
-    
     
     # 建立資料夾，預設為 pdf 檔名
     if output_folder == 'default':
@@ -175,22 +188,27 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
     # 定義每一張檔名，預設為"資料夾名稱_{}.jpg"
     if filename == 'default':
         filename = output_folder + '_{:03d}.png'
-        filename_paper = 'paper_' + output_folder + '_{:03d}.png'
+        filename_paper = output_folder + '_paper' + '_{:03d}.png'
     else:
         filename = filename + '_{:03d}.png'
-        filename_paper = 'paper_' + filename + '_{:03d}.png'
+        filename_paper = filename + '_paper' + '_{:03d}.png'
     output_path = os.path.join(output_folder, filename)
     output_path_paper = os.path.join(output_folder, filename_paper)
-    
+     
     # 將 pdf 逐頁拆分並轉換成 png 並儲存
-    # if test_mode is on; use color photos
+    # if in 'test' or 'grade' mode, use color photos
+    if mode == 'test' or mode == 'grade':
+        gscale = True
+    else:
+        gscale = False
+        
     if pages != None:
-        imgs = p2i.convert_from_path(path, grayscale = not test_mode, 
+        imgs = p2i.convert_from_path(path, grayscale=gscale, 
                                      first_page=pages[0], last_page=pages[1])
     else:
-        imgs = p2i.convert_from_path(path, grayscale = not test_mode)
+        imgs = p2i.convert_from_path(path, grayscale=gscale)
     
-    ### create csv
+    ### create {output_folder}.csv for labeling
     num_imgs = len(imgs)
     df = pd.DataFrame([
             [filename.format(i) for i in range(num_imgs)], 
@@ -199,24 +217,44 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
     df.T.to_csv(os.path.join(output_folder, output_folder+'.csv'), 
                 header=False, 
                 index=False)
+
+    # if in 'grade' mode
+    # set key_path and read key
+    # create empty DataFrame 
+    if mode == 'grade':
+        if key_path == 'default':
+            key_path = 'keys/{}_key.csv'.format(output_folder)
+        try:
+            key = pd.read_csv('keys/1081_1_key.csv', index_col=0, squeeze=True)    ### load key
+        except FileNotFoundError:
+            print('File not found: {}'.format(key_path))
+            print('Setting key to None')
+            key = None
+            
+        full = pd.DataFrame({
+                             'filename': [filename_paper.format(i) for i in range(num_imgs)],
+                             'id': ['']*num_imgs,
+                             'points': [-1]*num_imgs,
+                             'std_ans': [None]*num_imgs,
+                             'cor_ans': [-1]*num_imgs,
+                             'qr': ['']*num_imgs
+                            })
     
-    # prepare for extract key
-    if get_key:
-        key = pd.read_csv(key_path)    ### load key
-        msg = pd.Series(np.zeros(num_imgs, dtype = int))    ### for recording key
-    
-    
+    ### cropping images
     auto_boxing = True if box == 'auto' else False
     for i, im in enumerate(imgs):
-        ### save paper
-        im.save(output_path_paper.format(i))
+        if im.mode != 'L':
+            g_im = im.convert('L')
+        else:
+            g_im = im
         
         ### find box
         if auto_boxing:
-            box = find_box(im, box_size=cc_box_size)
+            box = find_box(g_im, box_size=cc_box_size)
             
         ### extract checkcode
-        if test_mode:
+        ### if in 'test' mode, enlarge the area and draw red rectangle
+        if mode == 'test':
             w = box[2] - box[0]
             h = box[3] - box[1]
             r = 0.3 ### extra padding
@@ -226,37 +264,38 @@ def extract(path, key_path, box='auto', get_key=False, output_folder='default', 
             checkcode = im.crop(view_box)
             
         else:
-            checkcode = im.crop(box)
+            checkcode = g_im.crop(box)
         checkcode = checkcode.resize((28,28))
         checkcode.save(output_path.format(i))
         
-        ### extract key
-        if get_key:
+        ### do more thing if in 'grade' mode
+        if mode == 'grade':
+            ### save _paper.png's
+            im.save(output_path_paper.format(i))
+            
+            ### extract key
             qr_box = find_qr_box(im, box_size = qr_box_size)
             qrcode = im.crop(qr_box)
             tmp_msg = detect(qrcode)
             try:
-                tmp_msg = tmp_msg[0][1:]
-                msg[i] = key.CHECKCODE.loc[key.KEY == tmp_msg].values[0]
-            except:
+                tmp_msg = tmp_msg[0][1:] ### QuizGenarator error to be fixed
+            except IndexError:
                 qrcode = qr_fixer(qrcode)
                 tmp_msg = detect(qrcode)
                 try:
-                    tmp_msg = tmp_msg[0][1:]
-                    msg[i] = key.CHECKCODE.loc[key.KEY == tmp_msg].values[0]
-                except:
+                    tmp_msg = tmp_msg[0][1:] ### QuizGenarator error to be fixed
+                except IndexError:
                     print('get qrcode failed: {}'.format(filename.format(i)))
-                    msg[i] = -1    ### 沒有掃描到 ＱＲcode
+                    tmp_msg = -1    ### 沒有掃描到 ＱＲcode
+            
+            full['qr'].iloc[i] = tmp_msg
+            if tmp_msg != -1:
+                full['cor_ans'].iloc[i] = key[tmp_msg]
 
-        ### TBD
-    
-    # save qr.csv
-    if get_key:
-        df = df.T
-        df[1] = msg
-        df.to_csv(os.path.join(output_folder, output_folder+'_qr.csv'),
-                  header=False,
-                  index=False)
+    # save {output_folder}_full.csv
+    if mode == 'grade':
+        full.to_csv(os.path.join(output_folder, output_folder+'_full.csv'),
+                    index=False)
         
 class raw_data:
     def __init__(self, path):
