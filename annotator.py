@@ -184,6 +184,7 @@ class raw_paper:
         receiver can be 'all' or 'v'
         mode can be 'dry', 'test', or 'send'
         use 'send' with caution
+        TODO: add ID to dry run; add number of email sent
         """
         ### warning message
         if mode == 'send':
