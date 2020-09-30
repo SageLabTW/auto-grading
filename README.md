@@ -15,3 +15,12 @@ Necessary Requirements : tensorflow 2.1.0, pdf2image 1.13.1, Pillow 7.0.0 and py
 
 ## How to Use
 If you have installed jupyter notebook, run the file `main.ipynb` on your machine and make sure you have installed the necessary library.  
+
+
+
+## TODO list
+- improve OCR
+- test robustness of find_box and find_qr_box
+- don't delete -1 when grading
+- delete unauthorized data
+- export data at the end of the semester
