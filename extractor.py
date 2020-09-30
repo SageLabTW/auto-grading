@@ -138,7 +138,7 @@ def qr_fixer(img):
 
     
 def extract(path, mode='label', box='auto', pages=None, 
-            cc_box_size=140, qr_box_size=180, 
+            cc_box_size=135, qr_box_size=180, 
             key_path='default', output_folder='default', filename='default'):
     """Write png files and a csv file to output_folder.
     
@@ -152,7 +152,7 @@ def extract(path, mode='label', box='auto', pages=None,
         pages: (start, end), the range of the pages, including both ends
 
         #CKLT
-        cc_box_size: default 140 (120 for 108 series)
+        cc_box_size: default 135 (120 for 108 series)
         qr_box_size: default 180 (160 for 108 series)
 
         key_path: path to the key, default is keys/{output_folder}_key.csv
