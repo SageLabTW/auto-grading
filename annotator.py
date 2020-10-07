@@ -225,7 +225,7 @@ class raw_paper:
             else:
                 print('dry run')
 
-        print("{} emails sent.".format(counter)
+        print("{} emails sent.".format(counter))
         
         if mode == 'send' or mode == 'test':
             server.close()
