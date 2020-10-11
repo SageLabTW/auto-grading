@@ -236,7 +236,9 @@ def get_record(base, first, *arg, to_csv=True):
     Input:
         base: usually path to email.csv
         first: proj_name of the mandatory exam
-        arg*: makeup exams
+        arg*: makeup exams (proj_name's only)
+            it is still fine if the pictures are missing.
+            put proj_name.csv in proj_name/ is good enouphg
     Output:
         a DataFrame recording id, points, filename of students
     """
