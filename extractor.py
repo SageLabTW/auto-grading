@@ -283,7 +283,7 @@ def extract(path, mode='label', box='auto', pages=None,
             try:
                 tmp_msg = tmp_msg[0][1:] ### QuizGenarator error to be fixed
             except IndexError:
-                qrcode = qr_fixer(qrcode, gscale = gscale)
+                qrcode = qr_fixer(qrcode)
                 tmp_msg = detect(qrcode)
                 try:
                     tmp_msg = tmp_msg[0][1:] ### QuizGenarator error to be fixed
