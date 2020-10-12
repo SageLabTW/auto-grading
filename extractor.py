@@ -277,13 +277,13 @@ def extract(path, mode='label', box='auto', pages=None,
             im.save(output_path_paper.format(i))
             
             ### extract key
-            qr_box = find_qr_box(im, box_size = qr_box_size)
-            qrcode = im.crop(qr_box)
+            qr_box = find_qr_box(g_im, box_size = qr_box_size)
+            qrcode = g_im.crop(qr_box)
             tmp_msg = detect(qrcode)
             try:
                 tmp_msg = tmp_msg[0][1:] ### QuizGenarator error to be fixed
             except IndexError:
-                qrcode = qr_fixer(qrcode)
+                qrcode = qr_fixer(qrcode, gscale = gscale)
                 tmp_msg = detect(qrcode)
                 try:
                     tmp_msg = tmp_msg[0][1:] ### QuizGenarator error to be fixed
