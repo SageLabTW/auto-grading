@@ -16,7 +16,18 @@ Necessary Requirements : tensorflow 2.1.0, pdf2image 1.13.1, Pillow 7.0.0 and py
 ## How to Use
 If you have installed jupyter notebook, run the file `main.ipynb` on your machine and make sure you have installed the necessary library.  
 
+## How to load the nsysu-digits dataset
+```python
+import urllib
+import numpy as np
 
+base = r"https://github.com/SageLabTW/auto-grading/raw/master/nsysu-digits/"
+urllib.request.urlretrieve(base + "X.csv", "nsysu-digits-X.csv")
+urllib.request.urlretrieve(base + "y.csv", "nsysu-digits-y.csv")
+
+X = np.genfromtxt('nsysu-digits-X.csv', dtype=int, delimiter=',')
+y = np.genfromtxt('nsysu-digits-y.csv', dtype=int, delimiter=',')
+```
 
 ## TODO list
 - improve OCR
