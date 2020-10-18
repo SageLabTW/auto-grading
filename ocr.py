@@ -30,7 +30,7 @@ def thicken(arr, rad=3, drop=0.8):
     new_arr = np.array(moves)
     return new_arr.max(axis=0)
 
-def img2arr(path, out_range=16, size=(8,8), rev=True):
+def img2arr(path, out_range=255, size=(28,28), rev=True):
     img = Image.open(path).resize(size)
     img_arr = np.array(img)
     if rev:
@@ -45,7 +45,7 @@ def img2arr(path, out_range=16, size=(8,8), rev=True):
 #         img_arr = img_arr.astype(int)
     return img_arr, msg
         
-def imgs2arr(raw=None, ext='png', out_range=16, size=(8,8), rev=True, rad=1, drop=0.8, level=None):
+def imgs2arr(raw=None, out_range=255, size=(28,28), rev=True, rad=1, drop=1, level=None):
     if raw == None:
         raw = ex.raw_data('nsysu-digits')
     files = [f for f in raw.df[0]]
@@ -104,6 +104,13 @@ def predict(mdl_path, data_path):
                   header=False,
                   index=False)
 
+def make_csv():
+    X = imgs2arr()
+    y = labels()
+    os.chdir('nsysu-digits')
+    np.savetxt("X.csv", X, fmt='%d', delimiter=',')
+    np.savetxt("y.csv", y, fmt='%d', delimiter=',')
+    os.chdir('..')
 
 
 
