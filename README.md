@@ -18,15 +18,19 @@ If you have installed jupyter notebook, run the file `main.ipynb` on your machin
 
 ## How to load the nsysu-digits dataset
 ```python
+import os
 import urllib
 import numpy as np
 
 base = r"https://github.com/SageLabTW/auto-grading/raw/master/nsysu-digits/"
-urllib.request.urlretrieve(base + "X.csv", "nsysu-digits-X.csv")
-urllib.request.urlretrieve(base + "y.csv", "nsysu-digits-y.csv")
+for c in ['X', 'y']:
+    filename = "nsysu-digits-%s.csv"%c
+    if filename not in os.listdir('.'):
+        print(filename, 'not found --- will download')
+        urllib.request.urlretrieve(base + c + ".csv", filename)
 
-X = np.genfromtxt('nsysu-digits-X.csv', dtype=int, delimiter=',')
-y = np.genfromtxt('nsysu-digits-y.csv', dtype=int, delimiter=',')
+Xsys = np.genfromtxt('nsysu-digits-X.csv', dtype=int, delimiter=',') ### flattened already
+ysys = np.genfromtxt('nsysu-digits-y.csv', dtype=int, delimiter=',')
 ```
 
 ## TODO list
