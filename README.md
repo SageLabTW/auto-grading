@@ -1,6 +1,6 @@
 ## Auto-grading
 An auto-grading system for handwritten digits implemented by Python.  
-Authors: Jephian Lin (maintainer) and Chan-Yu Pan (main).  
+Authors: Jephian Lin and Chan-Yu Pan  
 
 Necessary Requirements : tensorflow 2.1.0, pdf2image 1.13.1, Pillow 7.0.0 and pyzbar 0.1.8.  
 
@@ -32,6 +32,10 @@ for c in ['X', 'y']:
 Xsys = np.genfromtxt('nsysu-digits-X.csv', dtype=int, delimiter=',') ### flattened already
 ysys = np.genfromtxt('nsysu-digits-y.csv', dtype=int, delimiter=',')
 ```
+
+## License for NSYSU-digits database
+This NSYSU-digits database is made available by Jephian Lin and Chan-Yu Pan under the Open Database License: http://opendatacommons.org/licenses/odbl/1.0/.
+Any rights in individual contents of the database are licensed under the Database Contents License: http://opendatacommons.org/licenses/dbcl/1.0/
 
 ## TODO list
 - improve OCR
