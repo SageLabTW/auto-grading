@@ -347,7 +347,7 @@ class raw_data:
         
         return fig
     
-    def labeler(self, start=None, end=None, each_row=5, size=2, patch=None):
+    def labeler(self, start=None, end=None, each_row=5, size=2, patch=None, remove=True):
         """API for examining and modifying the data and labels"""
         if start == None:
             start = 0
@@ -406,17 +406,25 @@ empty: default is no change
             elif c == 'q':
                 break
             elif c == 's':
-                self.df = new_df.loc[~(new_df.notes == 'd'),[0,1]]
+                if remove:
+                    self.df = new_df.loc[~(new_df.notes == 'd'),[0,1]]
+                else:
+                    self.df = new_df.loc[:,[0,1]]
                 self.df = self.df.reset_index(drop=True)
-                for new_i in range(self.num):
-                    if new_df.loc[new_i,'notes'] == 'd':
-                        fn = new_df.iloc[new_i,0]
-                        os.remove(os.path.join(self.path, fn))
+                if remove:
+                    for new_i in range(self.num):
+                        if new_df.loc[new_i,'notes'] == 'd':
+                            fn = new_df.iloc[new_i,0]
+                            os.remove(os.path.join(self.path, fn))
                 old_num = self.num
                 self.num = self.df.shape[0]
-                print("Changed %s labels and dropped %s pictures:"
-                      %(np.sum(new_df.notes == 'r'),
+                print("Changed %s labels and dropped %s*%s pictures:"
+                      %(np.sum(new_df.notes == 'r'), 
+                        int(remove),
                         np.sum(new_df.notes == 'd')))
+                ### when remove == False, pictures are not removed, 
+                ### it is labeled by -1 or some designated number.
+                ### It does not count toward the changed labels.
                 print("Number of images: %s -> %s"%(old_num, self.num))
                 self.df.to_csv(os.path.join(self.path, self.name+'.csv'), 
                                header=False, 
