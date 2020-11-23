@@ -431,11 +431,12 @@ empty: default is no change
                                index=False)
                 print("New %s.csv written to %s."
                       %(self.name, self.path))
-                new_df.to_csv(os.path.join(self.path, self.name+'_patch.csv'), 
-                               header=False, 
-                               index=False)
-                print("The patch %s.csv written to %s."
-                      %(self.name+'_patch', self.path))
+                if patch == None:
+                    new_df.to_csv(os.path.join(self.path, self.name+'_patch.csv'), 
+                                   header=False, 
+                                   index=False)
+                    print("The patch %s.csv written to %s."
+                          %(self.name+'_patch', self.path))
                 break
             elif c == '': ### default action
                 i += 1
