@@ -205,17 +205,25 @@ class raw_paper:
             mailing_list = self.full.copy()
             
         counter = 0
+        count_w = 0
+        first = True
         for i in range(self.num):
             row = mailing_list.iloc[i]
             std_id = row['id']
             email = row['email']
             pic_path = row['graded_filename']
             
-            if mode == 'test' and i == 0:
+            if email == "-1":
+                count_w += 1
+                print("Empty email: std_id={}, attaching {}...".format(std_id, pic_path))
+                continue
+            
+            if mode == 'test' and first == True:
                 content = quiz_result_content(test_receiver, pic_path)
                 print('testing the first email to {}'.format(test_receiver))
                 print('it was suppose go to {}<{}>'.format(std_id, email))
                 send_email(server, content)
+                first = False
             
             content = quiz_result_content(email, pic_path)
             print("Sending email to {}<{}> attaching {}...".format(std_id, email, pic_path))
@@ -226,6 +234,7 @@ class raw_paper:
                 print('dry run')
 
         print("{} emails sent.".format(counter))
+        print("{} warnings.".format(count_w))
         
         if mode == 'send' or mode == 'test':
             server.close()
