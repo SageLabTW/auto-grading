@@ -43,3 +43,5 @@ Any rights in individual contents of the database are licensed under the Databas
 - don't delete -1 when grading
 - delete unauthorized data
 - export data at the end of the semester
+- increase quiz QR code quality
+- add "do not reply" message in the emails
