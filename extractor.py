@@ -281,12 +281,14 @@ def extract(path, mode='label', box='auto', pages=None,
             qrcode = g_im.crop(qr_box)
             tmp_msg = detect(qrcode)
             try:
-                tmp_msg = tmp_msg[0][1:] ### QuizGenarator error to be fixed
-            except IndexError:
+                ### old QuizGenarator accidentally put \n in front of each tmp_msg
+                tmp_msg = tmp_msg[0] if tmp_msg[0][0] != '\n' else tmp_msg[0][1:]
+            except IndexError: ### if nothing found
                 qrcode = qr_fixer(qrcode)
                 tmp_msg = detect(qrcode)
                 try:
-                    tmp_msg = tmp_msg[0][1:] ### QuizGenarator error to be fixed
+                    ### old QuizGenarator accidentally put \n in front of each tmp_msg
+                    tmp_msg = tmp_msg[0] if tmp_msg[0][0] != '\n' else tmp_msg[0][1:]
                 except IndexError:
                     print('get qrcode failed: {}'.format(filename.format(i)))
                     tmp_msg = -1    ### 沒有掃描到 ＱＲcode
