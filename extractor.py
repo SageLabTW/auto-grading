@@ -7,6 +7,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 import pdf2image as p2i
+### set poppler path if necessary
+### see https://pypi.org/project/pdf2image/
+### for how to install and setup poppler
+p_path = None
+### for example:
+### p_path=r"C:\Users\user\Downloads\poppler-20.09.0\bin"
+
+
 from PIL import ImageDraw
 import pyzbar.pyzbar as zbar
 
@@ -204,9 +212,11 @@ def extract(path, mode='label', box='auto', pages=None,
         
     if pages != None:
         imgs = p2i.convert_from_path(path, grayscale=gscale, 
+                                     poppler_path=p_path, 
                                      first_page=pages[0], last_page=pages[1])
     else:
-        imgs = p2i.convert_from_path(path, grayscale=gscale)
+        imgs = p2i.convert_from_path(path, grayscale=gscale, 
+                                     poppler_path=p_path)
     
     ### create {output_folder}.csv for labeling
     num_imgs = len(imgs)
