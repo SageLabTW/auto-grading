@@ -159,7 +159,7 @@ def show(imgs, ans=None, size=None):
     plt.show()
     plt.close()
     
-def predict(data_path, mdl_path="svc-1639.joblib", normalize_data=True):
+def predict(raw, mdl_path="svc-1639.joblib", normalize_data=True):
     """
     available models: OCR_mdl.h5, svc-1639.joblib
     """
@@ -171,16 +171,15 @@ def predict(data_path, mdl_path="svc-1639.joblib", normalize_data=True):
         loaded_model = joblib.load(mdl_path)
         
     ### load data
-    data = ex.raw_data(data_path)
-    X = imgs2arr(data)
+    X = imgs2arr(raw)
     rev(X)
     if normalize_data:
         normalize(X)
     
     if ext == 'h5': ### tensorflow CNN input format
-        X = X.reshape(data.num, 28, 28, 1)
+        X = X.reshape(raw.num, 28, 28, 1)
     if ext == 'joblib': ### sklearn input format
-        X = X.reshape(data.num, -1)
+        X = X.reshape(raw.num, -1)
     
     ### predict
     if ext == 'h5': ### tensorflow CNN input format
@@ -189,9 +188,10 @@ def predict(data_path, mdl_path="svc-1639.joblib", normalize_data=True):
         y_pred = loaded_model.predict(X)
     
     ### save result as a csv file
-    df_new = data.df.copy()
+    df_new = raw.df.copy()
     df_new[1] = y_pred
-    df_new.to_csv(os.path.join(data_path, data_path+'_pred.csv'),
+    df_new[2] = 'r'
+    df_new.to_csv(os.path.join(raw.path, raw.path+'_pred.csv'),
                   header=False,
                   index=False)
 

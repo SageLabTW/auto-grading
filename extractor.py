@@ -359,7 +359,7 @@ class raw_data:
         
         return fig
     
-    def labeler(self, start=None, end=None, each_row=5, size=2, patch=None, remove=True):
+    def labeler(self, start=None, end=None, each_row=5, size=2, patch=None, patch_gen=True, remove=True):
         """API for examining and modifying the data and labels"""
         if start == None:
             start = 0
@@ -443,7 +443,7 @@ empty: default is no change
                                index=False)
                 print("New %s.csv written to %s."
                       %(self.name, self.path))
-                if patch == None:
+                if patch_gen:
                     new_df.to_csv(os.path.join(self.path, self.name+'_patch.csv'), 
                                    header=False, 
                                    index=False)
