@@ -47,7 +47,7 @@ def quiz_result_content(to, pic_path):
     content["subject"] = "Quiz result" 
     content["from"] = "jephianlin@g-mail.nsysu.edu.tw" 
     content["to"] = to 
-    content.attach(MIMEText("Contact jephianlin@gmail.com if you have any question.")) # content
+    content.attach(MIMEText("Contact jephianlin@gmail.com if you have any question.  Please do not reply to this email.")) # content
     content.attach(MIMEImage(Path(pic_path).read_bytes(), Name=fn))
     # pictures attached by the next line cannot be opened directly on Gmail page
     # it can be downloaded though
