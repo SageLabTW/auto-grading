@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import joblib
 from PIL import Image
 
 np.set_printoptions(precision=2)
@@ -84,6 +85,7 @@ def normalize(X):
     """
     X is an array of flattened 28x28 images.
     This function will make changes of X directly.
+    This function requires the images to be 0: white and 255: black.
     """
     for i in range(X.shape[0]):
         arr = X[i].reshape(28,28)
@@ -93,13 +95,21 @@ def normalize(X):
         X[i] = arr.reshape(784)   
     return None
 
+def rev(X, out_range=255):
+    """
+    flip black and white
+    """
+    X *= -1
+    X += out_range
+    return None
+
 ### LOADING
-def img2arr(path, out_range=255, size=(28,28), rev=True):
+def img2arr(path, out_range=255, size=(28,28)):
     img = Image.open(path).resize(size)
     img_arr = np.array(img)
-    if rev:
-        img_arr = img_arr.max() - img_arr 
-    in_range = float(img_arr.max() - img_arr.min())
+#     if rev:
+#         img_arr = img_arr.max() - img_arr 
+    in_range = float(img_arr.max())
     if in_range == 0:
 #         print("Brightness is uniform")
         msg = "Brightness is uniform"
@@ -109,25 +119,25 @@ def img2arr(path, out_range=255, size=(28,28), rev=True):
 #         img_arr = img_arr.astype(int)
     return img_arr, msg
         
-def imgs2arr(raw, out_range=255, size=(28,28), rev=True, rad=1, drop=1, level=None):
+def imgs2arr(raw, out_range=255, size=(28,28)):
     files = [f for f in raw.df[0]]
-    a,b = len(files),size[0]*size[1]
+    a, b = len(files), size[0] * size[1]
     arr = np.zeros((a,b), dtype=int)
     for i,f in enumerate(files):
         img_arr, msg = img2arr(os.path.join(raw.path,f), 
                           out_range=out_range, 
-                          size=size, 
-                          rev=rev)
+                          size=size)
         if msg != None:
             print(f + ': ' + msg)
-        if rad > 1:
-            arr[i] = thicken(img_arr, rad=rad, drop=drop).reshape(b)
-        else:
-            arr[i] = img_arr.reshape(b)
-    if level != None: # level=(50,255,200,255)
-        mask = (arr>=level[0]) & (arr<=level[1])
-        ratio = (level[3] - level[2]) / (level[1] - level[0])
-        arr[mask] = (arr[mask] - level[0])*ratio + level[2]
+        arr[i] = img_arr.reshape(-1)
+#         if rad > 1:
+#             arr[i] = thicken(img_arr, rad=rad, drop=drop).reshape(b)
+#         else:
+#             arr[i] = img_arr.reshape(b)
+#     if level != None: # level=(50,255,200,255)
+#         mask = (arr>=level[0]) & (arr<=level[1])
+#         ratio = (level[3] - level[2]) / (level[1] - level[0])
+#         arr[mask] = (arr[mask] - level[0])*ratio + level[2]
     return arr
 
 def labels(raw):
@@ -149,15 +159,34 @@ def show(imgs, ans=None, size=None):
     plt.show()
     plt.close()
     
-def predict(mdl_path, data_path):
+def predict(data_path, mdl_path="svc-1639.joblib", normalize_data=True):
+    """
+    available models: OCR_mdl.h5, svc-1639.joblib
+    """
     ### load model and data
-    mdl = tf.keras.models.load_model('OCR_mdl.h5')
+    ext = mdl_path.split('.')[-1]
+    if ext == 'h5':
+        loaded_model = tf.keras.models.load_model(mdl_path)
+    if ext == 'joblib':
+        loaded_model = joblib.load(mdl_path)
+        
+    ### load data
     data = ex.raw_data(data_path)
-    X_test = imgs2arr(data, size=(28,28))
-    X_test = X_test.reshape(X_test.shape[0],28,28,1)
+    X = imgs2arr(data)
+    rev(X)
+    if normalize_data:
+        normalize(X)
+    
+    if ext == 'h5': ### tensorflow CNN input format
+        X = X.reshape(data.num, 28, 28, 1)
+    if ext == 'joblib': ### sklearn input format
+        X = X.reshape(data.num, -1)
     
     ### predict
-    y_pred = mdl.predict(X_test).argmax(axis=1)
+    if ext == 'h5': ### tensorflow CNN input format
+        y_pred = loaded_model.predict(X).argmax(axis=1)
+    if ext == 'joblib': ### sklearn input format
+        y_pred = loaded_model.predict(X)
     
     ### save result as a csv file
     df_new = data.df.copy()
@@ -170,6 +199,7 @@ def make_csv():
     ### only for nsysu-digits so far
     raw = ex.raw_data('nsysu-digits')
     X = imgs2arr()
+    rev(X) # 0: white, 255: black
     y = labels()
     os.chdir('nsysu-digits')
     np.savetxt("X.csv", X, fmt='%d', delimiter=',')
