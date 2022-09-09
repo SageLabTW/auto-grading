@@ -11,7 +11,7 @@ from PIL import Image
 np.set_printoptions(precision=2)
 
 
-
+### NORMALIZATION
 def shift_n_scale(arr, shift, scale=1):
     p,q = shift
     pad = max(abs(p), abs(q))
@@ -20,16 +20,80 @@ def shift_n_scale(arr, shift, scale=1):
     new[pad+p:pad+p+a, pad+q:pad+q+b] = scale*arr
     return new[pad:pad+a, pad:pad+b]
 
-def thicken(arr, rad=3, drop=0.8):
+def thicken(arr, rad=2, decay=0.8):
     moves = []
     for i in range(-rad, rad+1):
         for j in range(-rad, rad+1):
             dist = abs(i) + abs(j)
             if dist <= rad - 1:
-                moves.append(shift_n_scale(arr, (i,j), scale=drop**dist))
+                moves.append(shift_n_scale(arr, (i,j), scale=decay**dist))
     new_arr = np.array(moves)
     return new_arr.max(axis=0)
 
+def level(arr, thres=10, a=1, b=100):
+    m,n = arr.shape
+    new_arr = arr.copy()
+    new_arr[arr > thres] = new_arr[arr > thres] * a + b
+    upd = np.zeros_like(arr) + 255
+    thick = np.concatenate([new_arr[np.newaxis,:,:], upd[np.newaxis,:,:]], axis=0)
+    return thick.min(axis=0)
+
+def bounding_box(arr, thres=10, out='subarray'):
+    """
+    out can be 'bounds' or 'subarray'
+    """
+    xs,ys = np.where(arr > 10)
+    if out == 'bounds':
+        return xs.min(), xs.max(), ys.min(), ys.max()
+    if out == 'subarray':
+        return arr[xs.min():xs.max()+1, ys.min():ys.max()+1]
+    
+def out_size(in_size, target=20):
+    x,y = in_size
+    big = max(x,y)
+    ratio = float(target) / big 
+    out_x = target if x == big else int(np.ceil(x*ratio))
+    out_y = target if y == big else int(np.ceil(y*ratio))
+    return (out_x, out_y)
+
+def arr_centers(arr):
+    m,n = arr.shape
+    row_sum = np.sum(arr, axis=1)
+    v_cen = (row_sum * np.arange(m)).sum() / row_sum.sum()
+    col_sum = np.sum(arr, axis=0)
+    h_cen = (col_sum * np.arange(n)).sum() / col_sum.sum()
+    return (v_cen, h_cen)
+
+def centerize(arr, target=20):
+    m,n = arr.shape
+    new_arr = np.zeros((m + 2*target, n + 2*target), dtype=arr.dtype)
+    
+    img = Image.fromarray(bounding_box(arr).astype('uint8'))
+    o_size = out_size(img.size, target=target)   
+    re_arr = np.array(img.resize(o_size), dtype=arr.dtype)
+    v_cen,h_cen = arr_centers(re_arr)
+    v = target + int(np.round(0.5*n - v_cen))
+    h = target + int(np.round(0.5*m - h_cen))
+    vp = v + re_arr.shape[0]
+    hp = h + re_arr.shape[1]
+    
+    new_arr[v:vp, h:hp] = re_arr
+    return new_arr[target:target+m, target:target+n]
+
+def normalize(X):
+    """
+    X is an array of flattened 28x28 images.
+    This function will make changes of X directly.
+    """
+    for i in range(X.shape[0]):
+        arr = X[i].reshape(28,28)
+        arr = thicken(arr) ### decide whether to thicken
+        arr = level(arr) ### decide whether to darken
+        arr = centerize(arr) ### decide whether to center
+        X[i] = arr.reshape(784)   
+    return None
+
+### LOADING
 def img2arr(path, out_range=255, size=(28,28), rev=True):
     img = Image.open(path).resize(size)
     img_arr = np.array(img)
@@ -45,9 +109,7 @@ def img2arr(path, out_range=255, size=(28,28), rev=True):
 #         img_arr = img_arr.astype(int)
     return img_arr, msg
         
-def imgs2arr(raw=None, out_range=255, size=(28,28), rev=True, rad=1, drop=1, level=None):
-    if raw == None:
-        raw = ex.raw_data('nsysu-digits')
+def imgs2arr(raw, out_range=255, size=(28,28), rev=True, rad=1, drop=1, level=None):
     files = [f for f in raw.df[0]]
     a,b = len(files),size[0]*size[1]
     arr = np.zeros((a,b), dtype=int)
@@ -68,12 +130,12 @@ def imgs2arr(raw=None, out_range=255, size=(28,28), rev=True, rad=1, drop=1, lev
         arr[mask] = (arr[mask] - level[0])*ratio + level[2]
     return arr
 
-def labels(raw=None):
-    if raw == None:
-        raw = ex.raw_data('nsysu-digits')
+def labels(raw):
     return raw.df[1].values.astype(int)
 
-def show(imgs, ans, size=None):
+def show(imgs, ans=None, size=None):
+    if ans==None:
+        ans = -np.ones(imgs.shape[0])
     fig,axs = plt.subplots(5,5)
     for i in range(5):
         for j in range(5):
@@ -105,6 +167,8 @@ def predict(mdl_path, data_path):
                   index=False)
 
 def make_csv():
+    ### only for nsysu-digits so far
+    raw = ex.raw_data('nsysu-digits')
     X = imgs2arr()
     y = labels()
     os.chdir('nsysu-digits')
