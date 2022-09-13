@@ -235,7 +235,8 @@ def extract(path, mode='label', box='auto', pages=None,
         if key_path == 'default':
             key_path = os.path.join('keys','{}_key.csv'.format(output_folder))
         try:
-            key = pd.read_csv(key_path, index_col=0, squeeze=True)    ### load key
+            ### load key, and squeeze nx1 DataFrame into a Series
+            key = pd.read_csv(key_path, index_col=0).squeeze(1)
             no_key = False
         except FileNotFoundError:
             print('File not found: {}'.format(key_path))
