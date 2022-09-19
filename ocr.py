@@ -9,6 +9,8 @@ import tensorflow as tf
 import joblib
 from PIL import Image
 
+import warnings
+
 np.set_printoptions(precision=2)
 
 
@@ -65,11 +67,15 @@ def arr_centers(arr):
     h_cen = (col_sum * np.arange(n)).sum() / col_sum.sum()
     return (v_cen, h_cen)
 
-def centerize(arr, target=20):
+def centerize(arr, thres=10, target=20):
+    if (arr < thres).all():
+        warnings.warn("Found a blank picture.")
+        return arr 
+    
     m,n = arr.shape
     new_arr = np.zeros((m + 2*target, n + 2*target), dtype=arr.dtype)
     
-    img = Image.fromarray(bounding_box(arr).astype('uint8'))
+    img = Image.fromarray(bounding_box(arr, thres=thres).astype('uint8'))
     o_size = out_size(img.size, target=target)   
     re_arr = np.array(img.resize(o_size), dtype=arr.dtype)
     v_cen,h_cen = arr_centers(re_arr)
