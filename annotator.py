@@ -97,7 +97,7 @@ class raw_paper:
         if key_path == 'default':
             key_path = os.path.join('keys','{}_key.csv'.format(self.name))
         try:
-            key = pd.read_csv(key_path, index_col=0, squeeze=True)    ### load key
+            key = pd.read_csv(key_path, index_col=0).squeeze(1)    ### load key
         except FileNotFoundError:
             print('File not found: {}'.format(key_path))
             return 
@@ -120,7 +120,7 @@ class raw_paper:
         email_path is a csv file containing two columns (std_id, email_address)
         """
         try:
-            emails = pd.read_csv(email_path, index_col=0, squeeze=True, header=None)    ### load key
+            emails = pd.read_csv(email_path, index_col=0, header=None).squeeze(1)    ### load key
         except FileNotFoundError:
             print('File not found: {}'.format(email_path))
             return 
