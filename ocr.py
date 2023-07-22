@@ -204,9 +204,9 @@ def predict(raw, mdl_path="svc-1639.joblib", normalize_data=True):
 def make_csv():
     ### only for nsysu-digits so far
     raw = ex.raw_data('nsysu-digits')
-    X = imgs2arr()
+    X = imgs2arr(raw)
     rev(X) # 0: white, 255: black
-    y = labels()
+    y = labels(raw)
     os.chdir('nsysu-digits')
     np.savetxt("X.csv", X, fmt='%d', delimiter=',')
     np.savetxt("y.csv", y, fmt='%d', delimiter=',')
